@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254" role="img" aria-label="Sancho logo">
+  <g fill="#F2F2F3" stroke="#F2F2F3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- antenna -->
+    <circle cx="627" cy="322" r="77" stroke="none"/>
+    <rect x="598" y="380" width="58" height="100" stroke="none"/>
+    <!-- ears -->
+    <path stroke="none" d="M330 640H292a77 77 0 0 0-77 77v71a77 77 0 0 0 77 77h38z"/>
+    <path stroke="none" d="M924 640h38a77 77 0 0 1 77 77v71a77 77 0 0 1-77 77h-38z"/>
+    <!-- head -->
+    <path fill="none" stroke-width="70" d="M548 498h158a229 229 0 0 1 229 229v58a188 188 0 0 1-188 188H507a188 188 0 0 1-188-188v-58a229 229 0 0 1 229-229z"/>
+    <!-- eyes -->
+    <path fill="none" stroke-width="36" d="M425 762a55 60 0 0 1 110 0"/>
+    <path fill="none" stroke-width="36" d="M719 762a55 60 0 0 1 110 0"/>
+    <!-- smile -->
+    <path fill="none" stroke-width="36" d="M583 802a44 46 0 0 0 88 0"/>
+  </g>
+</svg>
