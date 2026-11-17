@@ -66,13 +66,13 @@ This is done on the host, not in Discord. Asking him in chat to allow a channel 
 
 He answers @mentions and replies to his own messages. Add `--no-mention` to make him answer every message in the channel.
 
-To trust a whole server, including channels created later, use its ID (the first number in any of its channel URLs):
+To allow every channel a server has right now, use its ID (the first number in any of its channel URLs):
 
 ```bash
 docker compose exec -u sancho sancho allow-server <serverId>
 ```
 
-Every text channel the bot can see there is allowed, and new ones are picked up within five minutes. Do this only for servers where you trust everyone who can create channels.
+Every text channel the bot can see there is allowed. Channels created later are not added; run the command again or add them one by one.
 
 The allowlist is a JSON file, `access.json`, in his private config volume. To limit a channel to specific people or remove one, send the plugin's access command as the owner (step 6), for example `say "/discord:access group add <channelId> --allow id1,id2"`.
 

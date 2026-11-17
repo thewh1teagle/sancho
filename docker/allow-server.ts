@@ -1,13 +1,10 @@
 #!/usr/bin/env bun
-// Allow every text channel of a Discord server, now and as new ones appear.
+// Allow every text channel a Discord server has right now.
 //
-//   allow-server <serverId>   trust a server and allow all of its channels
-//   allow-server --sync       re-check every trusted server (runs automatically)
-//   allow-server --list       show trusted servers
+//   allow-server <serverId>
 //
-// The Discord plugin's allowlist is per channel, so a trusted server is kept in a
-// separate file and its channels are copied into access.json whenever they change.
-// New channels require an @mention, like the rest.
+// One-off: channels created later are not added. Run it again, or use allow-channel.
+// The channels require an @mention, like the rest.
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -15,7 +12,6 @@ import { dirname, join } from "node:path";
 const CFG = process.env.CLAUDE_CONFIG_DIR ?? `${process.env.HOME}/.claude`;
 const DIR = join(CFG, "channels", "discord");
 const ACCESS = join(DIR, "access.json");
-const SERVERS = join(DIR, "servers.json");
 const TEXT_CHANNEL_TYPES = new Set([0, 5]); // text, announcement
 
 function readJson<T>(path: string, fallback: T): T {
@@ -44,7 +40,7 @@ async function discord(path: string): Promise<any> {
 }
 
 /** Adds any missing channels of one server to the allowlist. Returns how many were added. */
-async function syncServer(serverId: string): Promise<number> {
+async function allowServer(serverId: string): Promise<number> {
   const [server, channels] = await Promise.all([discord(`/guilds/${serverId}`), discord(`/guilds/${serverId}/channels`)]);
 
   // Re-read right before writing; the plugin edits this file too.
@@ -63,19 +59,11 @@ async function syncServer(serverId: string): Promise<number> {
 }
 
 const arg = process.argv[2];
-const servers = readJson<string[]>(SERVERS, []);
 
-if (arg === "--list") {
-  console.log(servers.length ? servers.join("\n") : "No trusted servers.");
-} else if (arg === "--sync") {
-  for (const id of servers) {
-    await syncServer(id).catch((err) => console.error(`[allow-server] ${id}: ${err.message}`));
-  }
-} else if (arg && /^\d{17,20}$/.test(arg)) {
-  const added = await syncServer(arg); // fails here if the bot is not in that server
-  if (!servers.includes(arg)) writeJson(SERVERS, [...servers, arg]);
-  console.log(`Server ${arg} is trusted. ${added} channel(s) added now; new channels are picked up automatically.`);
+if (arg && /^\d{17,20}$/.test(arg)) {
+  const added = await allowServer(arg); // fails here if the bot is not in that server
+  console.log(`${added} channel(s) of server ${arg} added. Channels created later are not added.`);
 } else {
-  console.error("usage: allow-server <serverId> | --sync | --list");
+  console.error("usage: allow-server <serverId>");
   process.exit(2);
 }
