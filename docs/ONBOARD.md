@@ -48,26 +48,32 @@ ANTHROPIC_MODEL=claude-sonnet-5-5
 docker compose up -d --build
 ```
 
-## 4. Allow a channel
+## 4. Allowlist a channel
 
-Being in a server is not enough. Sancho ignores every channel until it is allowlisted.
+Inviting Sancho to a server does nothing by itself. He ignores every channel until you add it to his allowlist, and messages sent before that are dropped.
 
-Get the channel ID: it is the last number in the channel's URL, or right-click the channel and **Copy Channel ID** (needs Developer Mode, under Settings > Advanced).
+This is done on the host, not in Discord. Asking him in chat to allow a channel will not work: his rules forbid changing access on request, so that nobody can talk their way in.
 
-Attach to the session and run:
+1. Get the channel ID. It is the last number in the channel's URL:
+   `discord.com/channels/<server>/<channelId>`
+2. Run this on the machine hosting Sancho:
 
-```
-/discord:access group add <channelId>
-```
+   ```bash
+   docker compose exec -u sancho sancho allow-channel <channelId>
+   ```
 
-He now answers @mentions and replies to his own messages there. Add `--no-mention` to answer every message, or `--allow id1,id2` to limit who can trigger him.
+3. Mention `@Sancho` in that channel. No restart needed.
+
+He answers @mentions and replies to his own messages. Add `--no-mention` to make him answer every message in the channel.
+
+The allowlist is a JSON file, `access.json`, in his private config volume. To limit a channel to specific people or remove one, attach to the session (step 6) and use `/discord:access`, for example `/discord:access group add <channelId> --allow id1,id2`.
 
 ## 5. A friend's server
 
 1. In the Developer Portal, keep **Public Bot** on. With it off, only you can invite the bot.
 2. Send your friend the invite link from step 2. They need **Manage Server** in their server to accept it.
-3. They send you the links of the channels he should join.
-4. You allowlist each one as in step 4.
+3. They send you the link of each channel he should answer in.
+4. You allowlist each one as in step 4. Until you do, he stays silent there.
 
 Your friend cannot switch him on by themselves; the allowlist on your machine is the gate. Everyone in an allowed channel can make him run things in the container on your bill, so add only channels you trust.
 

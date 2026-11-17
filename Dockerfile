@@ -33,7 +33,8 @@ RUN curl -fsSL https://bun.sh/install | bash \
 USER root
 COPY AGENTS.md /etc/claude-code/CLAUDE.md
 COPY docker/ /opt/sancho/
-RUN chmod 644 /etc/claude-code/CLAUDE.md && chmod 755 /opt/sancho/*.sh
+RUN chmod 644 /etc/claude-code/CLAUDE.md && chmod 755 /opt/sancho/*.sh \
+ && ln -s /opt/sancho/allow-channel.sh /usr/local/bin/allow-channel
 
 WORKDIR /data
 ENTRYPOINT ["/opt/sancho/entrypoint.sh"]
