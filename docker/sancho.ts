@@ -10,6 +10,7 @@
 
 import { existsSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { loadJobs, saveJobs, takeDueJobs, type Job } from "./schedule-store.ts";
 
 const CFG = process.env.CLAUDE_CONFIG_DIR ?? `${process.env.HOME}/.claude`;
 const SOCKET = process.env.SANCHO_SOCKET ?? "/tmp/sancho.sock";
@@ -75,6 +76,39 @@ Bun.listen({
   },
 });
 
+// --- scheduled tasks ---------------------------------------------------------
+
+const RETRY_MS = 10 * 60_000;
+const MAX_ATTEMPTS = 5;
+const started = new Map<string, Job>(); // message uuid -> job, until Claude picks it up
+let runningJob: Job | null = null;
+
+function runDueJobs() {
+  for (const job of takeDueJobs()) {
+    const lateMinutes = Math.round((Date.now() - Date.parse(job.at)) / 60_000);
+    const who = job.userId ? `<@${job.userId}>` : (job.user ?? "the person who asked");
+    const uuid = crypto.randomUUID();
+    started.set(uuid, job);
+    log(`⏰ scheduled ${job.id} for ${job.user ?? "?"}: ${clip(job.task)}`);
+    send(
+      `Scheduled task ${job.id}, due now. ${job.user ?? "Someone"} asked for it on ${job.createdAt} in Discord chat ${job.chatId}.` +
+        (lateMinutes >= 5 ? ` It is ${lateMinutes} minutes late because you were unavailable; say so.` : "") +
+        ` Do it now with whatever tools it needs, then post the result with the reply tool to chat_id ${job.chatId}, mentioning ${who}.` +
+        `\n\nThe task: ${job.task}`,
+      uuid,
+    );
+  }
+}
+setInterval(runDueJobs, 5_000);
+
+/** A task that failed because the API refused it goes back in the queue for later. */
+function retryJob(job: Job) {
+  const attempts = (job.attempts ?? 0) + 1;
+  if (attempts >= MAX_ATTEMPTS) return log(`⏰ scheduled ${job.id} failed ${attempts} times, giving up`);
+  saveJobs([...loadJobs(), { ...job, attempts, at: new Date(Date.now() + RETRY_MS).toISOString() }]);
+  log(`⏰ scheduled ${job.id} failed, retrying in ${RETRY_MS / 60_000} minutes`);
+}
+
 // --- events from Claude -----------------------------------------------------
 
 let sessionId = "";
@@ -99,6 +133,9 @@ function handle(event: any) {
       if (event.isReplay && waiting.has(event.uuid)) {
         answering = waiting.get(event.uuid)!;
         waiting.delete(event.uuid);
+      } else if (event.isReplay && started.has(event.uuid)) {
+        runningJob = started.get(event.uuid)!;
+        started.delete(event.uuid);
       } else if (text.startsWith("<channel ")) {
         const user = text.match(/\buser="([^"]*)"/)?.[1] ?? "?";
         log(`← discord · ${user}: ${clip(text.replace(/^<channel [^>]*>/, "").replace(/<\/channel>\s*$/, ""))}`);
@@ -118,6 +155,10 @@ function handle(event: any) {
       const cost = typeof event.total_cost_usd === "number" ? ` · $${event.total_cost_usd.toFixed(2)} so far` : "";
       const text = String(event.result ?? "");
       log(`${event.is_error ? "✗" : "✓"} turn ${seconds}s${cost}${event.is_error ? ` · ${clip(text)}` : ""}`);
+      if (runningJob) {
+        if (event.is_error) retryJob(runningJob);
+        runningJob = null;
+      }
       if (answering) {
         answering.write(text + "\n");
         answering.end();

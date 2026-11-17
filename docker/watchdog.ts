@@ -21,6 +21,7 @@ const NOTICES: Record<string, string> = {
   rate_limit_error: "I can't answer right now: I've hit a rate limit. Try again in a few minutes.",
   overloaded_error: "I can't answer right now: Claude's API is overloaded. Try again in a few minutes.",
   api_error: "I can't answer right now: Claude's API is having trouble. Try again in a few minutes.",
+  spend_limit: "I can't answer right now: I've reached my monthly API spending limit. My owner needs to raise it.",
   authentication_error: "I can't answer right now: my API key was rejected. My owner needs to fix it.",
   permission_error: "I can't answer right now: my API key isn't allowed to do this. My owner needs to fix it.",
 };
@@ -87,7 +88,9 @@ async function handle(state: FileState, entry: any) {
   }
 
   if (entry.type === "assistant" && entry.isApiErrorMessage && state.source) {
-    await notify(state.source, String(entry.error ?? entry.apiErrorType ?? "unknown"));
+    const text = String(entry.message?.content?.[0]?.text ?? "");
+    const kind = /usage limits/i.test(text) ? "spend_limit" : String(entry.error ?? "unknown");
+    await notify(state.source, kind in NOTICES ? kind : String(entry.apiErrorType ?? kind));
   }
 }
 
