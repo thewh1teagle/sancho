@@ -46,6 +46,10 @@ function send(text: string, uuid: string) {
   claude.stdin.flush();
 }
 
+// A headless session only starts up, and only begins listening to Discord, once it gets
+// its first input. Wake it now so a message arriving after a restart is not lost.
+send("Supervisor: the session has just started. Nothing to do. Reply with the single word OK and use no tools.", crypto.randomUUID());
+
 // --- owner messages over a local socket -------------------------------------
 
 type Client = { write(data: string): number; end(): void };
