@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Boot order: firewall (root) -> drop to sancho -> config setup -> Claude in tmux.
+# Boot order: firewall (root) -> drop to sancho -> config setup -> headless Claude.
 set -euo pipefail
 
 if [ "$(id -u)" = 0 ]; then
@@ -16,10 +16,9 @@ done
 
 /opt/sancho/setup.sh
 
-# Claude needs a terminal; tmux provides one. Attach with:
-#   docker compose exec -u sancho sancho tmux attach -t sancho   (detach: Ctrl-b d)
-tmux new-session -d -s sancho -x 200 -y 50 -c /data \
-  "claude --channels plugin:discord@claude-plugins-official --dangerously-skip-permissions"
+# Tell Discord when the API refuses a request, since the model cannot say so itself.
+(while true; do bun /opt/sancho/watchdog.ts; sleep 5; done) &
 
-# When the session ends the container exits and `restart: always` brings it back.
-while tmux has-session -t sancho 2>/dev/null; do sleep 5; done
+# Run Claude headless under the supervisor. When it exits, the container exits and
+# `restart: always` brings it back.
+exec bun /opt/sancho/sancho.ts

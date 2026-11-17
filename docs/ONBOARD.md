@@ -14,9 +14,9 @@ Pick one.
 2. Under **API credits**, link a Console organization.
 3. Create an API key in that organization and use it as above.
 
-> Check before relying on this. Anthropic's [credits page](https://platform.claude.com/docs/en/about-claude/api-credits-for-subscribers) lists the Agent SDK as covered and Claude Code as not covered, and Sancho is a Claude Code session. Watch which balance drains on the Console [Billing](https://platform.claude.com/settings/billing) page after a few messages.
+Sancho runs Claude Code headless, which Anthropic bills as Agent SDK usage, so these credits cover him. An interactive Claude Code session on the same key is not covered.
 
-**Plan login.** Leave `ANTHROPIC_API_KEY` empty, start the container, attach (see step 6) and run `/login` once. Usage then counts against your plan's normal limits.
+**Plan login.** Leave `ANTHROPIC_API_KEY` empty and log in once with `docker compose run --rm -it -u sancho --entrypoint claude sancho`, then `/login`, then exit and start Sancho. Usage then counts against your plan's normal limits.
 
 ## 2. Discord bot
 
@@ -66,7 +66,7 @@ This is done on the host, not in Discord. Asking him in chat to allow a channel 
 
 He answers @mentions and replies to his own messages. Add `--no-mention` to make him answer every message in the channel.
 
-The allowlist is a JSON file, `access.json`, in his private config volume. To limit a channel to specific people or remove one, attach to the session (step 6) and use `/discord:access`, for example `/discord:access group add <channelId> --allow id1,id2`.
+The allowlist is a JSON file, `access.json`, in his private config volume. To limit a channel to specific people or remove one, send the plugin's access command as the owner (step 6), for example `say "/discord:access group add <channelId> --allow id1,id2"`.
 
 ## 5. A friend's server
 
@@ -80,14 +80,18 @@ Your friend cannot switch him on by themselves; the allowlist on your machine is
 ## 6. Everyday
 
 ```bash
-# Attach to the live session (detach: Ctrl-b d)
-docker compose exec -u sancho sancho tmux attach -t sancho
-
+docker compose logs -f          # one line per message, tool call and turn
 docker compose restart          # after editing data/CLAUDE.md
 docker compose up -d --build    # after editing AGENTS.md or the image
-docker compose logs -f
+
+# Talk to him as the owner, from the host. He answers in your terminal.
+docker compose exec -u sancho sancho say "what did you save to memory today?"
 ```
 
-**Direct messages** are in pairing mode: a stranger who DMs him gets a code and nothing else. To let someone in, run `/discord:access pair <code>` in the session. To allow only listed people, run `/discord:access policy allowlist`.
+`say` is how you give him instructions outside Discord, such as "read channel X" or "post a summary in channel Y".
+
+**Direct messages** are in pairing mode: a stranger who DMs him gets a code and nothing else. To let someone in, run `say "/discord:access pair <code>"`. To allow only listed people, run `say "/discord:access policy allowlist"`.
+
+**When the API refuses him** (no credits, rate limit, outage), a watchdog replies in the channel with the reason, so people are not left waiting.
 
 **Persona and memory** live in `data/`: edit `data/CLAUDE.md` to change how he behaves; he keeps notes in `data/memory/` and articles in `data/articles/`.

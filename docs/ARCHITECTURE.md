@@ -1,13 +1,15 @@
 # Architecture
 
-Sancho is one interactive Claude Code session, kept alive in a container, with the official Discord channel plugin feeding it messages.
+Sancho is one headless Claude Code session (Agent SDK mode), kept alive in a container by a small supervisor, with the official Discord channel plugin feeding it messages.
 
 ```mermaid
 flowchart LR
     U[Discord users] <--> D[Discord]
     subgraph C[Container: non-root, firewalled]
-        P[Discord plugin<br/>bun MCP server] <--> S[Claude Code session<br/>in tmux]
+        P[Discord plugin<br/>bun MCP server] <--> S[Claude Code session<br/>headless]
         S --> T[Tools: curl, pdftotext, uv, bun]
+        SV[Supervisor] --> S
+        W[Watchdog] -.-> D
     end
     D <--> P
     S <--> A[Anthropic API]
@@ -21,22 +23,25 @@ flowchart LR
 1. A user @mentions Sancho, or replies to one of his messages, in an allowlisted channel.
 2. The plugin checks the sender and channel against `access.json`. Anything not allowed is dropped before Claude sees it.
 3. The message is injected into the running session as a channel event tagged with channel, message and user.
-4. Claude works (web fetch, shell, files) and answers by calling the plugin's `reply` tool. Terminal output never reaches Discord.
+4. Claude works (web fetch, shell, files) and answers by calling the plugin's `reply` tool. Plain output never reaches Discord.
 
 The plugin exposes five tools: `reply`, `react`, `edit_message`, `fetch_messages`, `download_attachment`.
 
 ## Boot sequence
 
-`restart: always` keeps the container up. Each start runs three scripts from `docker/`:
+`restart: always` keeps the container up. Each start runs these from `docker/`:
 
 | Step | Script | Runs as | Does |
 |---|---|---|---|
 | 1 | `firewall.sh` | root | Rejects outbound traffic to private network ranges |
 | 2 | `entrypoint.sh` | root, then `sancho` | Drops privileges, clears empty env vars, starts the rest |
 | 3 | `setup.sh` | `sancho` | Pre-answers Claude Code's first-run prompts, seeds the Discord allowlist on first boot, installs the plugin and its dependencies |
-| 4 | `entrypoint.sh` | `sancho` | Starts `claude --channels … --dangerously-skip-permissions` in tmux and waits on it |
+| 4 | `watchdog.ts` | `sancho` | Follows the session log; when a Discord message ends in an API error, replies in that channel with the reason |
+| 5 | `sancho.ts` | `sancho` | Supervisor: runs `claude -p` with streaming input and the Discord channel, logs each event, accepts owner messages from `say` |
 
-Claude Code needs a terminal, which is why it runs inside tmux. If the session exits, the container exits and Docker restarts it.
+The supervisor keeps the session's input open, which is what keeps a headless session alive between messages. If Claude exits, the supervisor exits, the container exits, and Docker restarts it.
+
+Headless mode is a billing choice as much as a technical one: Anthropic counts it as Agent SDK usage, which the API credits included with Max, Ultra and Team plans cover. An interactive session on the same key is billed as Claude Code, which those credits exclude.
 
 ## Storage
 
@@ -59,15 +64,15 @@ Two files shape behaviour, loaded at session start:
 ## Memory
 
 - **Within a run**: one conversation holds every message from every channel and user. Claude Code summarises older context as it grows.
-- **Across restarts**: the conversation is not resumed. What carries over is whatever Sancho wrote to `data/memory/`, which he is told to do as he learns things.
+- **Across restarts**: the supervisor saves the session ID and resumes that conversation on the next start. If it will not resume, the next start is fresh. `data/memory/` is the durable record either way, and he is told to write things there as he learns them.
 
 ## Access control
 
 `access.json` in the `claude-home` volume is the plugin's allowlist, re-read on every inbound message.
 
 - **Channels** are opt-in by ID. Each entry can require a mention and can restrict which users may trigger him.
-- **DMs** follow `dmPolicy`: `pairing` (unknown users get a code that must be approved in the terminal), `allowlist`, or `disabled`.
-- **First boot** writes an allowlist from `DISCORD_OWNER_ID` and `DISCORD_CHANNEL_ID` if set. After that the file is managed with `/discord:access` in the attached session.
+- **DMs** follow `dmPolicy`: `pairing` (unknown users get a code that the owner must approve), `allowlist`, or `disabled`.
+- **First boot** writes an allowlist from `DISCORD_OWNER_ID` and `DISCORD_CHANNEL_ID` if set. After that it is managed with the `allow-channel` helper, or by sending `/discord:access` commands through `say`.
 
 ## Isolation layers
 

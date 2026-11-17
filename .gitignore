@@ -2,4 +2,4 @@
 .env
 .env.*
 data/
-image.png
+image*.png

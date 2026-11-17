@@ -6,7 +6,7 @@ ARG GID=1000
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      ca-certificates curl git jq tmux unzip ripgrep iptables util-linux poppler-utils \
+      ca-certificates curl git jq unzip ripgrep iptables util-linux poppler-utils \
  && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g ${GID} sancho \
@@ -34,7 +34,9 @@ USER root
 COPY AGENTS.md /etc/claude-code/CLAUDE.md
 COPY docker/ /opt/sancho/
 RUN chmod 644 /etc/claude-code/CLAUDE.md && chmod 755 /opt/sancho/*.sh \
- && ln -s /opt/sancho/allow-channel.sh /usr/local/bin/allow-channel
+ && chmod 755 /opt/sancho/say.ts \
+ && ln -s /opt/sancho/allow-channel.sh /usr/local/bin/allow-channel \
+ && ln -s /opt/sancho/say.ts /usr/local/bin/say
 
 WORKDIR /data
 ENTRYPOINT ["/opt/sancho/entrypoint.sh"]
