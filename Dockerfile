@@ -9,6 +9,14 @@ RUN apt-get update \
       ca-certificates curl git jq unzip ripgrep iptables util-linux poppler-utils \
  && rm -rf /var/lib/apt/lists/*
 
+# GitHub CLI, from GitHub's own apt repository.
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
+ && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list \
+ && apt-get update && apt-get install -y --no-install-recommends gh \
+ && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd -g ${GID} sancho \
  && useradd -m -u ${UID} -g ${GID} -s /bin/bash sancho \
  && mkdir -p /data /opt/tools && chown sancho:sancho /data /opt/tools
@@ -34,8 +42,9 @@ USER root
 COPY AGENTS.md /etc/claude-code/CLAUDE.md
 COPY docker/ /opt/sancho/
 RUN chmod 644 /etc/claude-code/CLAUDE.md && chmod 755 /opt/sancho/*.sh \
- && chmod 755 /opt/sancho/say.ts \
+ && chmod 755 /opt/sancho/say.ts /opt/sancho/allow-server.ts \
  && ln -s /opt/sancho/allow-channel.sh /usr/local/bin/allow-channel \
+ && ln -s /opt/sancho/allow-server.ts /usr/local/bin/allow-server \
  && ln -s /opt/sancho/say.ts /usr/local/bin/say
 
 WORKDIR /data

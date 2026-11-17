@@ -40,4 +40,15 @@ for dir in "$CFG"/plugins/cache/claude-plugins-official/discord/*/; do
   (cd "$dir" && bun install --no-summary) || true
 done
 
-mkdir -p /data/articles /data/memory
+# GitHub: if a token is set, commit as that account and let git push over HTTPS with it.
+if [ -n "${GH_TOKEN:-}" ]; then
+  if user=$(gh api user --jq '"\(.id)+\(.login)@users.noreply.github.com \(.login)"' 2>/dev/null); then
+    git config --global user.email "${user%% *}"
+    git config --global user.name "${user##* }"
+    gh auth setup-git
+  else
+    echo "[setup] GH_TOKEN is set but GitHub rejected it" >&2
+  fi
+fi
+
+mkdir -p /data/articles /data/memory /data/projects

@@ -66,6 +66,14 @@ This is done on the host, not in Discord. Asking him in chat to allow a channel 
 
 He answers @mentions and replies to his own messages. Add `--no-mention` to make him answer every message in the channel.
 
+To trust a whole server, including channels created later, use its ID (the first number in any of its channel URLs):
+
+```bash
+docker compose exec -u sancho sancho allow-server <serverId>
+```
+
+Every text channel the bot can see there is allowed, and new ones are picked up within five minutes. Do this only for servers where you trust everyone who can create channels.
+
 The allowlist is a JSON file, `access.json`, in his private config volume. To limit a channel to specific people or remove one, send the plugin's access command as the owner (step 6), for example `say "/discord:access group add <channelId> --allow id1,id2"`.
 
 ## 5. A friend's server
@@ -91,6 +99,8 @@ docker compose exec -u sancho sancho say "what did you save to memory today?"
 `say` is how you give him instructions outside Discord, such as "read channel X" or "post a summary in channel Y".
 
 **Direct messages** are in pairing mode: a stranger who DMs him gets a code and nothing else. To let someone in, run `say "/discord:access pair <code>"`. To allow only listed people, run `say "/discord:access policy allowlist"`.
+
+**GitHub access** is optional. Create a separate GitHub account for him, generate a classic token there with the `repo`, `workflow` and `read:org` scopes, and add `GH_TOKEN=...` to `.env.local`. He then works on branches and opens pull requests: from a fork for repositories he cannot write to, or directly where you have added his account as a collaborator. He can also create repositories under his own account. Protect your default branches; his rules forbid pushing to them, but a rule is not a lock.
 
 **When the API refuses him** (no credits, rate limit, outage), a watchdog replies in the channel with the reason, so people are not left waiting.
 
