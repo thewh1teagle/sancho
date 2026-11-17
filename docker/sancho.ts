@@ -47,9 +47,21 @@ function send(text: string, uuid: string) {
   claude.stdin.flush();
 }
 
-// A headless session only starts up, and only begins listening to Discord, once it gets
-// its first input. Wake it now so a message arriving after a restart is not lost.
-send("Supervisor: the session has just started. Nothing to do. Reply with the single word OK and use no tools.", crypto.randomUUID());
+// A headless session only starts up once it gets its first input, and the Discord plugin
+// is still connecting during that first turn. Claude attaches the plugin, and begins
+// listening to Discord, at the start of the next turn. So wake it now, and again after
+// each turn until the plugin is reported connected; otherwise Discord messages that
+// arrive after a restart are acknowledged by the plugin and then lost.
+const WAKE = "Supervisor: the session has just started. Nothing to do. Reply with the single word OK and use no tools.";
+const MAX_WAKES = 5;
+let wakes = 0;
+let discordConnected = false;
+
+function wake() {
+  wakes++;
+  send(WAKE, crypto.randomUUID());
+}
+wake();
 
 // --- owner messages over a local socket -------------------------------------
 
@@ -117,6 +129,11 @@ function handle(event: any) {
   switch (event.type) {
     case "system":
       if (event.subtype === "init") {
+        const discord = (event.mcp_servers ?? []).find((s: any) => String(s.name).includes("discord"));
+        if (discord?.status === "connected" && !discordConnected) {
+          discordConnected = true;
+          log("Discord plugin connected, listening");
+        }
         if (event.session_id === sessionId) return; // repeated at the start of every turn
         sessionId = event.session_id;
         writeFileSync(SESSION_FILE, event.session_id);
@@ -155,6 +172,10 @@ function handle(event: any) {
       const cost = typeof event.total_cost_usd === "number" ? ` · $${event.total_cost_usd.toFixed(2)} so far` : "";
       const text = String(event.result ?? "");
       log(`${event.is_error ? "✗" : "✓"} turn ${seconds}s${cost}${event.is_error ? ` · ${clip(text)}` : ""}`);
+      if (!discordConnected) {
+        if (wakes < MAX_WAKES) setTimeout(wake, 3_000);
+        else if (wakes++ === MAX_WAKES) log("✗ Discord plugin is still not connected; Discord messages will not arrive");
+      }
       if (runningJob) {
         if (event.is_error) retryJob(runningJob);
         runningJob = null;

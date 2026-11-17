@@ -25,7 +25,7 @@ if [ ! -f "$ACCESS" ] && [ -n "${DISCORD_OWNER_ID:-}" ]; then
   mkdir -p "$(dirname "$ACCESS")"
   jq -n --arg owner "$DISCORD_OWNER_ID" --arg chan "${DISCORD_CHANNEL_ID:-}" '{
     dmPolicy: "allowlist",
-    allowFrom: [$owner],
+    allowFrom: ($owner | split(",")),
     groups: (if $chan != "" then {($chan): {requireMention: true, allowFrom: []}} else {} end)
   }' > "$ACCESS"
 fi

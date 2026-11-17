@@ -42,7 +42,8 @@ USER root
 COPY AGENTS.md /etc/claude-code/CLAUDE.md
 COPY docker/ /opt/sancho/
 RUN chmod 644 /etc/claude-code/CLAUDE.md && chmod 755 /opt/sancho/*.sh \
- && chmod 755 /opt/sancho/say.ts /opt/sancho/allow-server.ts /opt/sancho/schedule.ts \
+ && chmod 755 /opt/sancho/say.ts /opt/sancho/allow-server.ts /opt/sancho/schedule.ts /opt/sancho/access.ts \
+ && ln -s /opt/sancho/access.ts /usr/local/bin/access \
  && ln -s /opt/sancho/schedule.ts /usr/local/bin/schedule \
  && ln -s /opt/sancho/allow-channel.sh /usr/local/bin/allow-channel \
  && ln -s /opt/sancho/allow-server.ts /usr/local/bin/allow-server \

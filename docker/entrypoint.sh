@@ -4,6 +4,9 @@ set -euo pipefail
 
 if [ "$(id -u)" = 0 ]; then
   /opt/sancho/firewall.sh
+  # Owners may change access from Discord. The list is root-owned so the agent cannot edit it.
+  mkdir -p /etc/sancho
+  printf '%s\n' "${DISCORD_OWNER_ID:-}" | tr ',' '\n' > /etc/sancho/owners
   exec setpriv --reuid=sancho --regid=sancho --init-groups "$0"
 fi
 
