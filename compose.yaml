@@ -1,0 +1,20 @@
+services:
+  sancho:
+    build: .
+    container_name: sancho
+    restart: always
+    init: true
+    env_file: .env.local
+    volumes:
+      - ./data:/data                      # the only host folder
+      - claude-home:/home/sancho/.claude  # container-private Claude config, login, plugin state
+      - tools:/opt/tools                  # tools the agent installs for itself (uv, binaries)
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN, SETUID, SETGID]  # used by the entrypoint only, before it drops to the sancho user
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 2g
+    pids_limit: 512
+
+volumes:
+  claude-home:
+  tools:

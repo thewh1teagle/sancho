@@ -1,0 +1,39 @@
+FROM debian:bookworm-slim
+
+ARG CLAUDE_CODE_VERSION=2.1.326
+ARG UID=1000
+ARG GID=1000
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates curl git jq tmux unzip ripgrep iptables util-linux poppler-utils \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g ${GID} sancho \
+ && useradd -m -u ${UID} -g ${GID} -s /bin/bash sancho \
+ && mkdir -p /data /opt/tools && chown sancho:sancho /data /opt/tools
+
+USER sancho
+ENV HOME=/home/sancho
+ENV PATH=/opt/tools/bin:/home/sancho/.local/bin:/home/sancho/.bun/bin:$PATH
+ENV CLAUDE_CONFIG_DIR=/home/sancho/.claude
+ENV DISABLE_AUTOUPDATER=1
+# Everything the agent installs for itself lands in the /opt/tools volume.
+ENV UV_TOOL_DIR=/opt/tools/uv/tools \
+    UV_TOOL_BIN_DIR=/opt/tools/bin \
+    UV_PYTHON_INSTALL_DIR=/opt/tools/uv/python \
+    UV_CACHE_DIR=/opt/tools/uv/cache
+
+RUN curl -fsSL https://bun.sh/install | bash \
+ && curl -LsSf https://astral.sh/uv/install.sh | sh \
+ && curl -fsSL https://claude.ai/install.sh | bash -s ${CLAUDE_CODE_VERSION} \
+ && mkdir -p /home/sancho/.claude
+
+# Safety rules live in the image, root-owned, so the agent cannot edit them.
+USER root
+COPY AGENTS.md /etc/claude-code/CLAUDE.md
+COPY docker/ /opt/sancho/
+RUN chmod 644 /etc/claude-code/CLAUDE.md && chmod 755 /opt/sancho/*.sh
+
+WORKDIR /data
+ENTRYPOINT ["/opt/sancho/entrypoint.sh"]
