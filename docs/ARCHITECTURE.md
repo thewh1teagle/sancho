@@ -56,10 +56,20 @@ Headless mode is a billing choice as much as a technical one: Anthropic counts i
 
 ## Instructions
 
-Two files shape behaviour, loaded at session start:
+Everything Sancho is told lives in `agent/`, plus one persona file in the data folder:
 
-- **`AGENTS.md`** is copied into the image as `/etc/claude-code/CLAUDE.md`, Claude Code's managed-policy location. It is root-owned, so the agent cannot rewrite its own safety rules. Changing it needs a rebuild.
-- **`data/CLAUDE.md`** is the persona and working habits. Sancho may edit it. Changing it needs a restart.
+| File | Holds | Loaded |
+|---|---|---|
+| `agent/AGENTS.md` | Core rules: who to obey, network, secrets, the machine, GitHub safety, and the index of the files below | Always |
+| `agent/discord.md` | Reading the room, replying, channel names | Always (appended to the core file at build) |
+| `agent/subagents.md` | Handing work to background subagents, model magic words | Always |
+| `agent/workspace.md` | The data folder, memory, installed tools | Always |
+| `agent/scheduling.md` | The `schedule` command | When the topic comes up |
+| `agent/access.md` | The `access` command | When the topic comes up |
+| `agent/github.md` | Working with repositories | When the topic comes up |
+| `data/persona.md` | Persona: name, tone, local facts. Starts as a copy of `agent/persona.example.md` | Always |
+
+The `agent/` folder is copied to `/etc/claude-code/`, Claude Code's managed-policy location. The core file and the three always-on files are joined there into `CLAUDE.md`; the on-demand files sit next to it. It is root-owned, so the agent cannot rewrite its own rules; changing them needs a rebuild. The persona is his to edit; the supervisor passes it to Claude at startup, so a restart picks up changes.
 
 ## Memory
 
@@ -82,13 +92,13 @@ Two files shape behaviour, loaded at session start:
 | Privileges | Non-root user, no `sudo`, `no-new-privileges`, all capabilities dropped except the three the root phase of the entrypoint needs |
 | Network | `iptables` rejects 10/8, 172.16/12, 192.168/16, 169.254/16 and 100.64/10; public internet stays open |
 | Resources | 2 GB memory, 512 processes |
-| Behaviour | `AGENTS.md`: instructions come only from Discord messages; web content and files are data |
+| Behaviour | `agent/AGENTS.md`: instructions come only from Discord messages; web content and files are data |
 
 ## Known limits
 
 - **Prompt injection is mitigated, not solved.** The rules tell Sancho to ignore instructions in web pages and files, but a model can be fooled. The public internet is open, so a successful injection could leak the contents of `data/` or the API key and bot token held in the container's environment. Treat both as revocable and keep nothing private in `data/`.
 - **No separation between users.** All channels share one conversation and one memory folder. Something said in one channel can surface in another.
-- **The allowlist is protected by rule, not by permissions.** `access.json` is writable by the agent's user; only `AGENTS.md` tells him not to change it on request.
+- **The allowlist is protected by rule, not by permissions.** `access.json` is writable by the agent's user; only `agent/AGENTS.md` tells him not to change it on request.
 - **IPv6 filtering is best effort.** The IPv4 rules must apply or the container fails to start; the IPv6 rules are skipped if unavailable.
 - **Root inside the container can lift the firewall.** The agent cannot become root, but `docker exec` as root from the host can.
 - **One message at a time.** Messages queue while he is working, and messages sent while the container is down are missed.

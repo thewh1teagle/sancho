@@ -51,4 +51,8 @@ if [ -n "${GH_TOKEN:-}" ]; then
   fi
 fi
 
+# First boot: start from the example persona. The owner edits it from then on.
+[ -f /data/CLAUDE.md ] && [ ! -f /data/persona.md ] && mv /data/CLAUDE.md /data/persona.md  # older installs
+[ -f /data/persona.md ] || cp /etc/claude-code/persona.example.md /data/persona.md
+
 mkdir -p /data/articles /data/memory /data/projects

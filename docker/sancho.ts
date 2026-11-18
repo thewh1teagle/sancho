@@ -15,6 +15,7 @@ import { loadJobs, saveJobs, takeDueJobs, type Job } from "./schedule-store.ts";
 const CFG = process.env.CLAUDE_CONFIG_DIR ?? `${process.env.HOME}/.claude`;
 const SOCKET = process.env.SANCHO_SOCKET ?? "/tmp/sancho.sock";
 const SESSION_FILE = join(CFG, "sancho-session-id");
+const PERSONA = "/data/persona.md"; // name, tone and local facts for this install
 const RESUME = process.env.SANCHO_RESUME !== "0";
 
 const log = (line: string) => console.log(`[sancho] ${line}`);
@@ -34,6 +35,7 @@ const args = [
   "--replay-user-messages",
   "--channels", "plugin:discord@claude-plugins-official",
   "--dangerously-skip-permissions",
+  ...(existsSync(PERSONA) ? ["--append-system-prompt-file", PERSONA] : []),
   ...(previous ? ["--resume", previous] : []),
 ];
 

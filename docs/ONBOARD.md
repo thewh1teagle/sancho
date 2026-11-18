@@ -89,8 +89,8 @@ Your friend cannot switch him on by themselves; the allowlist on your machine is
 
 ```bash
 docker compose logs -f          # one line per message, tool call and turn
-docker compose restart          # after editing data/CLAUDE.md
-docker compose up -d --build    # after editing AGENTS.md or the image
+docker compose restart          # after editing data/persona.md
+docker compose up -d --build    # after editing agent/ or the image
 
 # Talk to him as the owner, from the host. He answers in your terminal.
 docker compose exec -u sancho sancho say "what did you save to memory today?"
@@ -108,4 +108,4 @@ docker compose exec -u sancho sancho say "what did you save to memory today?"
 
 **When the API refuses him** (no credits, rate limit, outage), a watchdog replies in the channel with the reason, so people are not left waiting.
 
-**Persona and memory** live in `data/`: edit `data/CLAUDE.md` to change how he behaves; he keeps notes in `data/memory/` and articles in `data/articles/`.
+**Persona and memory** live in `data/`: edit `data/persona.md` to change how he behaves; he keeps notes in `data/memory/` and articles in `data/articles/`.

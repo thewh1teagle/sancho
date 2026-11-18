@@ -37,11 +37,14 @@ RUN curl -fsSL https://bun.sh/install | bash \
  && curl -fsSL https://claude.ai/install.sh | bash -s ${CLAUDE_CODE_VERSION} \
  && mkdir -p /home/sancho/.claude
 
-# Safety rules live in the image, root-owned, so the agent cannot edit them.
+# The agent's rules and manual live in the image, root-owned, so it cannot edit them.
 USER root
-COPY AGENTS.md /etc/claude-code/CLAUDE.md
+COPY agent/ /etc/claude-code/
 COPY docker/ /opt/sancho/
-RUN chmod 644 /etc/claude-code/CLAUDE.md && chmod 755 /opt/sancho/*.sh \
+RUN cd /etc/claude-code \
+ && cat AGENTS.md discord.md subagents.md workspace.md > CLAUDE.md \
+ && rm AGENTS.md discord.md subagents.md workspace.md \
+ && chmod 644 /etc/claude-code/*.md && chmod 755 /opt/sancho/*.sh \
  && chmod 755 /opt/sancho/say.ts /opt/sancho/allow-server.ts /opt/sancho/schedule.ts /opt/sancho/access.ts \
  && ln -s /opt/sancho/access.ts /usr/local/bin/access \
  && ln -s /opt/sancho/schedule.ts /usr/local/bin/schedule \
