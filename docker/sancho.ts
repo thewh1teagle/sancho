@@ -163,7 +163,11 @@ function handle(event: any) {
     case "assistant":
       if (event.parent_tool_use_id) return; // subagent chatter
       for (const block of event.message?.content ?? []) {
-        if (block.type === "tool_use") log(`  tool: ${block.name}`);
+        if (block.type !== "tool_use") continue;
+        if (block.name === "Agent") {
+          const where = block.input?.run_in_background ? "background" : "foreground";
+          log(`  ⇢ subagent (${where}${block.input?.model ? `, ${block.input.model}` : ""}): ${clip(String(block.input?.description ?? ""))}`);
+        } else log(`  tool: ${block.name}`);
       }
       return;
 
