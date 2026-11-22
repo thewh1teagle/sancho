@@ -13,20 +13,13 @@
 // it names the channel or user being changed. Owners are set by the host in
 // DISCORD_OWNER_ID and written to a root-owned file the agent cannot edit.
 
-import { existsSync, readFileSync } from "node:fs";
-import { discordGet as discord, isId, loadAccess, saveAccess } from "./discord.ts";
+import { discordGet as discord, loadAccess, owners, saveAccess } from "./discord.ts";
 
-const OWNERS = process.env.SANCHO_OWNERS_FILE ?? "/etc/sancho/owners";
 const MAX_AGE_MS = 10 * 60_000;
 
 function refuse(message: string): never {
   console.error(`Refused: ${message}`);
   process.exit(1);
-}
-
-function owners(): string[] {
-  if (!existsSync(OWNERS)) return [];
-  return readFileSync(OWNERS, "utf8").split(/\s+/).filter(isId);
 }
 
 /** Proves that an owner asked for a change to `targetId`, or exits. Returns the owner's name. */

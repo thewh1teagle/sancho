@@ -104,7 +104,7 @@ docker compose exec -u sancho sancho say "what did you save to memory today?"
 
 **Managing access from Discord.** Put your Discord user ID in `DISCORD_OWNER_ID` in `.env.local` (comma-separated for several owners). Owners can then tell him in plain words, in a DM or any channel he answers in, to "answer in #some-channel", "stop answering in #other", or "let @someone DM you". He runs an `access` command that reads the request back from Discord and acts only if an owner really sent it, so nobody else can talk him into it.
 
-**Scheduled tasks.** Ask him to do something later ("in 20 minutes check X", "remind me Friday at 9") and he queues it, then does the work with his full tools when it comes due. One-off times only. For a clock time he asks your timezone once and remembers it. The queue is `data/schedule.json`.
+**Scheduled tasks.** Ask him to do something later ("in 20 minutes check X", "remind me Friday at 9") and he queues it, then does the work with his full tools when it comes due. Tasks can also repeat ("every day at 9", "every Monday and Thursday at 18:30", "every 2 hours"); each person may hold 5 repeating tasks, owners any number. For a clock time he asks your timezone once and remembers it. The queue is `data/schedule.json`.
 
 **When the API refuses him** (no credits, rate limit, outage), a watchdog replies in the channel with the reason, so people are not left waiting.
 

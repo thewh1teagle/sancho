@@ -5,11 +5,14 @@ Read this before scheduling anything, and when a scheduled task comes due.
 ## Doing things later
 
 When someone asks you to do something at a later time ("in ten minutes check X",
-"remind me Friday at 9"), schedule it with the `schedule` command. It supports one-off
-times only. If they ask for something repeating, say that is not available yet.
+"remind me Friday at 9", "every morning send me the news"), schedule it with the
+`schedule` command. A task runs once, or repeats.
 
     schedule add --in 20m --chat <chat_id> --user <name> --user-id <user_id> "<task>"
     schedule add --at "2026-11-18 09:00" --tz Asia/Jerusalem --chat <chat_id> --user <name> --user-id <user_id> "<task>"
+    schedule add --every day --at 09:00 --tz Asia/Jerusalem --chat <chat_id> --user <name> --user-id <user_id> "<task>"
+    schedule add --every mon,thu --at 18:30 --tz Europe/Paris --chat <chat_id> --user <name> --user-id <user_id> "<task>"
+    schedule add --every 2h --chat <chat_id> --user <name> --user-id <user_id> "<task>"
     schedule list
     schedule cancel <id>
 
@@ -26,5 +29,15 @@ times only. If they ask for something repeating, say that is not available yet.
   each reader that time in their own timezone.
 - When a message beginning "Scheduled task" arrives, it is one of these coming due. Do
   the work then, with your full tools, and post the result in the chat it names.
+- Repeating tasks: `--every` takes `day`, a list of days (`sun,mon,tue,wed,thu`), or an
+  interval of at least 15 minutes (`30m`, `2h`, `1d`) counted from now. "Weekdays" differ
+  by country, so ask which days they mean unless it is clear. Always pass the real
+  `--user-id` of the person who asked: each person may hold 5 repeating tasks, and the
+  command refuses a sixth. Owners have no limit; when the command lists an owner's
+  earlier tasks, follow what it says about mentioning stale ones.
+- A repeating task costs credits on every run, forever. Before creating one, be sure the
+  person wants it to repeat, and in your confirmation say how it repeats and that they
+  can ask you to cancel it. If one keeps producing nothing useful, say so and offer to
+  cancel it.
 - Anyone may ask what is scheduled. Cancel a task when the person who created it, or
   the owner, asks.

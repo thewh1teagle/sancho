@@ -5,9 +5,9 @@ import { $ } from "bun";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { ACCESS_FILE, CFG, readJson, writeJson } from "./discord.ts";
+import { env } from "./env.ts";
 
 const PLUGIN = "discord@claude-plugins-official";
-const env = process.env;
 
 // Answer Claude Code's onboarding, theme, trust and API-key prompts in advance.
 const stateFile = join(CFG, ".claude.json");
@@ -16,7 +16,7 @@ state.hasCompletedOnboarding = true;
 state.theme ??= "dark";
 state.projects ??= {};
 state.projects["/data"] = { ...state.projects["/data"], hasTrustDialogAccepted: true };
-if (env.ANTHROPIC_API_KEY) state.customApiKeyResponses = { approved: [env.ANTHROPIC_API_KEY.slice(-20)], rejected: [] };
+if (env.apiKey) state.customApiKeyResponses = { approved: [env.apiKey.slice(-20)], rejected: [] };
 writeJson(stateFile, state);
 chmodSync(stateFile, 0o600);
 
@@ -24,11 +24,11 @@ const settingsFile = join(CFG, "settings.json");
 if (!existsSync(settingsFile)) writeJson(settingsFile, { skipDangerousModePermissionPrompt: true });
 
 // First boot only: allow the owners (and optionally one channel), so no pairing is needed.
-if (!existsSync(ACCESS_FILE) && env.DISCORD_OWNER_ID) {
+if (!existsSync(ACCESS_FILE) && env.ownerIds.length) {
   writeJson(ACCESS_FILE, {
     dmPolicy: "allowlist",
-    allowFrom: env.DISCORD_OWNER_ID.split(",").map((id) => id.trim()).filter(Boolean),
-    groups: env.DISCORD_CHANNEL_ID ? { [env.DISCORD_CHANNEL_ID]: { requireMention: true, allowFrom: [] } } : {},
+    allowFrom: env.ownerIds,
+    groups: env.firstChannelId ? { [env.firstChannelId]: { requireMention: true, allowFrom: [] } } : {},
   });
 }
 
@@ -49,7 +49,7 @@ for (const version of existsSync(pluginCache) ? readdirSync(pluginCache) : []) {
 rmSync(join(CFG, "mcp-needs-auth-cache.json"), { force: true });
 
 // GitHub: with a token, commit as that account and let git push over HTTPS with it.
-if (env.GH_TOKEN) {
+if (env.githubToken) {
   const user = await $`gh api user`.nothrow().quiet();
   if (user.exitCode === 0) {
     const { id, login } = user.json();

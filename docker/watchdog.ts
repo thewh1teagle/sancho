@@ -10,11 +10,11 @@
 import { readdirSync, statSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { botToken } from "./discord.ts";
+import { env } from "./env.ts";
 
-const CFG = process.env.CLAUDE_CONFIG_DIR ?? `${process.env.HOME}/.claude`;
-const DIR = process.env.WATCHDOG_DIR ?? join(CFG, "projects", "-data");
-const DRY_RUN = process.env.WATCHDOG_DRY_RUN === "1";
-const COOLDOWN_MS = Number(process.env.WATCHDOG_COOLDOWN_MIN ?? 10) * 60_000;
+const DIR = env.watchdogDir ?? join(env.configDir, "projects", "-data");
+const DRY_RUN = env.watchdogDryRun;
+const COOLDOWN_MS = env.watchdogCooldownMin * 60_000;
 const POLL_MS = 3_000;
 
 const NOTICES: Record<string, string> = {

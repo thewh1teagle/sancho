@@ -2,8 +2,9 @@
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { env } from "./env.ts";
 
-export const CFG = process.env.CLAUDE_CONFIG_DIR ?? `${process.env.HOME}/.claude`;
+export const CFG = env.configDir;
 export const DISCORD_DIR = join(CFG, "channels", "discord");
 export const ACCESS_FILE = join(DISCORD_DIR, "access.json");
 export const TEXT_CHANNEL_TYPES = new Set([0, 5]); // text, announcement
@@ -34,10 +35,15 @@ export function loadAccess(): Access {
   return { ...access, dmPolicy: access.dmPolicy ?? "pairing", allowFrom: access.allowFrom ?? [], groups: access.groups ?? {} };
 }
 
+/** Owner IDs, set by the host in DISCORD_OWNER_ID and written to a root-owned file at boot. */
+export function owners(): string[] {
+  return existsSync(env.ownersFile) ? readFileSync(env.ownersFile, "utf8").split(/\s+/).filter(isId) : [];
+}
+
 export const saveAccess = (access: Access) => writeJson(ACCESS_FILE, access);
 
 export function botToken(): string | undefined {
-  if (process.env.DISCORD_BOT_TOKEN) return process.env.DISCORD_BOT_TOKEN;
+  if (env.botToken) return env.botToken;
   const envFile = join(DISCORD_DIR, ".env");
   if (!existsSync(envFile)) return undefined;
   return readFileSync(envFile, "utf8").match(/^DISCORD_BOT_TOKEN=(.+)$/m)?.[1]?.trim();

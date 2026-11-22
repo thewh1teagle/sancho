@@ -10,13 +10,14 @@
 
 import { existsSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { loadJobs, saveJobs, takeDueJobs, type Job } from "./schedule-store.ts";
+import { env } from "./env.ts";
+import { describeRepeat, loadJobs, saveJobs, takeDueJobs, type Job } from "./schedule-store.ts";
 
-const CFG = process.env.CLAUDE_CONFIG_DIR ?? `${process.env.HOME}/.claude`;
-const SOCKET = process.env.SANCHO_SOCKET ?? "/tmp/sancho.sock";
+const CFG = env.configDir;
+const SOCKET = env.socket;
 const SESSION_FILE = join(CFG, "sancho-session-id");
 const PERSONA = "/data/persona.md"; // name, tone and local facts for this install
-const RESUME = process.env.SANCHO_RESUME !== "0";
+const RESUME = env.resume;
 
 const log = (line: string) => console.log(`[sancho] ${line}`);
 const clip = (text: string, max = 100) => {
@@ -106,6 +107,7 @@ function runDueJobs() {
     log(`⏰ scheduled ${job.id} for ${job.user ?? "?"}: ${clip(job.task)}`);
     send(
       `Scheduled task ${job.id}, due now. ${job.user ?? "Someone"} asked for it on ${job.createdAt} in Discord chat ${job.chatId}.` +
+        (job.repeat ? ` It repeats ${describeRepeat(job.repeat)}; this is run ${(job.runs ?? 0) + 1}, and the next one is already queued.` : "") +
         (lateMinutes >= 5 ? ` It is ${lateMinutes} minutes late because you were unavailable; say so.` : "") +
         ` Do it now with whatever tools it needs, then post the result with the reply tool to chat_id ${job.chatId}, mentioning ${who}.` +
         `\n\nThe task: ${job.task}`,
@@ -117,6 +119,8 @@ setInterval(runDueJobs, 5_000);
 
 /** A task that failed because the API refused it goes back in the queue for later. */
 function retryJob(job: Job) {
+  // A repeating task is already queued for its next time; a second copy would run it twice.
+  if (job.repeat) return log(`⏰ scheduled ${job.id} failed, next run as scheduled`);
   const attempts = (job.attempts ?? 0) + 1;
   if (attempts >= MAX_ATTEMPTS) return log(`⏰ scheduled ${job.id} failed ${attempts} times, giving up`);
   saveJobs([...loadJobs(), { ...job, attempts, at: new Date(Date.now() + RETRY_MS).toISOString() }]);
