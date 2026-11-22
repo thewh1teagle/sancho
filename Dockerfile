@@ -44,13 +44,10 @@ COPY docker/ /opt/sancho/
 RUN cd /etc/claude-code \
  && cat AGENTS.md discord.md subagents.md workspace.md > CLAUDE.md \
  && rm AGENTS.md discord.md subagents.md workspace.md \
- && chmod 644 /etc/claude-code/*.md && chmod 755 /opt/sancho/*.sh \
- && chmod 755 /opt/sancho/say.ts /opt/sancho/allow-server.ts /opt/sancho/schedule.ts /opt/sancho/access.ts \
- && ln -s /opt/sancho/access.ts /usr/local/bin/access \
- && ln -s /opt/sancho/schedule.ts /usr/local/bin/schedule \
- && ln -s /opt/sancho/allow-channel.sh /usr/local/bin/allow-channel \
- && ln -s /opt/sancho/allow-server.ts /usr/local/bin/allow-server \
- && ln -s /opt/sancho/say.ts /usr/local/bin/say
+ && chmod 644 /etc/claude-code/*.md && chmod 755 /opt/sancho/entrypoint.sh \
+ && for cmd in access allow-channel allow-server say schedule; do \
+      chmod 755 /opt/sancho/$cmd.ts && ln -s /opt/sancho/$cmd.ts /usr/local/bin/$cmd; \
+    done
 
 WORKDIR /data
 ENTRYPOINT ["/opt/sancho/entrypoint.sh"]

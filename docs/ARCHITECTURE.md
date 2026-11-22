@@ -29,15 +29,14 @@ The plugin exposes five tools: `reply`, `react`, `edit_message`, `fetch_messages
 
 ## Boot sequence
 
-`restart: always` keeps the container up. Each start runs these from `docker/`:
+`restart: always` keeps the container up. Each start runs these from `docker/`. The entrypoint is the only shell script; everything else is TypeScript run with bun.
 
 | Step | Script | Runs as | Does |
 |---|---|---|---|
-| 1 | `firewall.sh` | root | Rejects outbound traffic to private network ranges |
-| 2 | `entrypoint.sh` | root, then `sancho` | Drops privileges, clears empty env vars, starts the rest |
-| 3 | `setup.sh` | `sancho` | Pre-answers Claude Code's first-run prompts, seeds the Discord allowlist on first boot, installs the plugin and its dependencies |
-| 4 | `watchdog.ts` | `sancho` | Follows the session log; when a Discord message ends in an API error, replies in that channel with the reason |
-| 5 | `sancho.ts` | `sancho` | Supervisor: runs `claude -p` with streaming input and the Discord channel, logs each event, accepts owner messages from `say` |
+| 1 | `entrypoint.sh` | root, then `sancho` | Rejects outbound traffic to private networks, writes the owner list, drops privileges |
+| 2 | `setup.ts` | `sancho` | Pre-answers Claude Code's first-run prompts, seeds the allowlist and persona on first boot, installs the plugin, configures git |
+| 3 | `watchdog.ts` | `sancho` | Follows the session log; when a Discord message ends in an API error, replies in that channel with the reason |
+| 4 | `sancho.ts` | `sancho` | Supervisor: runs `claude -p` with streaming input and the Discord channel, logs each event, runs scheduled tasks, accepts owner messages from `say` |
 
 The supervisor keeps the session's input open, which is what keeps a headless session alive between messages. If Claude exits, the supervisor exits, the container exits, and Docker restarts it.
 

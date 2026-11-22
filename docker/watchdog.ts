@@ -9,6 +9,7 @@
 
 import { readdirSync, statSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { botToken } from "./discord.ts";
 
 const CFG = process.env.CLAUDE_CONFIG_DIR ?? `${process.env.HOME}/.claude`;
 const DIR = process.env.WATCHDOG_DIR ?? join(CFG, "projects", "-data");
@@ -33,13 +34,6 @@ type FileState = { offset: number; source: Source | null };
 const files = new Map<string, FileState>();
 const lastNotice = new Map<string, number>(); // chatId -> time of last notice
 const notified = new Set<string>(); // message ids already answered
-
-function botToken(): string | undefined {
-  if (process.env.DISCORD_BOT_TOKEN) return process.env.DISCORD_BOT_TOKEN;
-  const envFile = join(CFG, "channels", "discord", ".env");
-  if (!existsSync(envFile)) return undefined;
-  return readFileSync(envFile, "utf8").match(/^DISCORD_BOT_TOKEN=(.+)$/m)?.[1]?.trim();
-}
 
 function channelSource(entry: any): Source | null {
   const text = typeof entry.message?.content === "string" ? entry.message.content : "";
